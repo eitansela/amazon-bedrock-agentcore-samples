@@ -5,7 +5,7 @@ from boto3.session import Session
 import botocore
 from botocore.exceptions import ClientError
 import requests
-import time
+
 
 def setup_cognito_user_pool():
     boto_session = Session()
@@ -97,7 +97,7 @@ def get_or_create_user_pool(cognito, USER_POOL_NAME):
             domain = user_pool.get('Domain')
         
             if domain:
-                region = user_pool_id.split('_')[0] if '_' in user_pool_id else REGION
+                region = user_pool_id.split('_')[0] if '_' in user_pool_id else 'us-east-1'
                 domain_url = f"https://{domain}.auth.{region}.amazoncognito.com"
                 print(f"Found domain for user pool {user_pool_id}: {domain} ({domain_url})")
             else:
@@ -116,7 +116,7 @@ def get_or_create_user_pool(cognito, USER_POOL_NAME):
 
 def get_or_create_resource_server(cognito, user_pool_id, RESOURCE_SERVER_ID, RESOURCE_SERVER_NAME, SCOPES):
     try:
-        existing = cognito.describe_resource_server(
+        cognito.describe_resource_server(
             UserPoolId=user_pool_id,
             Identifier=RESOURCE_SERVER_ID
         )
@@ -896,7 +896,7 @@ def create_dynamodb_table(table_name, key_schema, attribute_definitions, region=
     dynamodb_client = boto3.client('dynamodb', region_name=region)
     
     try:
-        response = dynamodb_client.create_table(
+        dynamodb_client.create_table(
             TableName=table_name,
             KeySchema=key_schema,
             AttributeDefinitions=attribute_definitions,
@@ -908,7 +908,7 @@ def create_dynamodb_table(table_name, key_schema, attribute_definitions, region=
         # Wait for table to be active
         waiter = dynamodb_client.get_waiter('table_exists')
         waiter.wait(TableName=table_name)
-        print(f"  Table is active")
+        print("  Table is active")
         
         return table_name
         
@@ -992,7 +992,7 @@ def create_lambda_role_with_policies(role_name, policy_statements, description='
                 PolicyName='CustomPolicy',
                 PolicyDocument=json.dumps(custom_policy)
             )
-            print(f"  ✓ Custom policy attached")
+            print("  ✓ Custom policy attached")
         except Exception as e:
             print(f"  ⚠ Policy error: {e}")
     
@@ -1079,12 +1079,12 @@ def grant_gateway_invoke_permission(function_name, region='us-east-1'):
             Principal='bedrock-agentcore.amazonaws.com',
             SourceArn=f'arn:aws:bedrock-agentcore:{region}:{account_id}:gateway/*'
         )
-        print(f"✓ Gateway invoke permission added to Lambda")
-        print(f"  Principal: bedrock-agentcore.amazonaws.com")
+        print("✓ Gateway invoke permission added to Lambda")
+        print("  Principal: bedrock-agentcore.amazonaws.com")
         
     except ClientError as e:
         if e.response['Error']['Code'] == 'ResourceConflictException':
-            print(f"⚠ Permission already exists (this is fine)")
+            print("⚠ Permission already exists (this is fine)")
         else:
             print(f"⚠ Error adding permission: {e}")
             raise
