@@ -10,7 +10,18 @@ import requests
 def setup_cognito_user_pool():
     boto_session = Session()
     region = boto_session.region_name
-    
+
+    import os
+    import secrets
+    import string
+
+    # Generate a random password meeting Cognito's default policy (min 8 chars)
+    alphabet = string.ascii_letters + string.digits + "!@#$%"
+    random_password = ''.join(secrets.choice(alphabet) for _ in range(16))
+
+    cognito_username = os.environ.get('COGNITO_TEST_USERNAME', 'testuser')
+    cognito_password = os.environ.get('COGNITO_TEST_PASSWORD', random_password)
+
     # Initialize Cognito client
     cognito_client = boto3.client('cognito-idp', region_name=region)
     
@@ -41,16 +52,16 @@ def setup_cognito_user_pool():
         # Create User
         cognito_client.admin_create_user(
             UserPoolId=pool_id,
-            Username='testuser',
-            TemporaryPassword='Temp123!',
+            Username=cognito_username,
+            TemporaryPassword=cognito_password,
             MessageAction='SUPPRESS'
         )
         
         # Set Permanent Password
         cognito_client.admin_set_user_password(
             UserPoolId=pool_id,
-            Username='testuser',
-            Password='MyPassword123!',
+            Username=cognito_username,
+            Password=cognito_password,
             Permanent=True
         )
         
@@ -59,8 +70,8 @@ def setup_cognito_user_pool():
             ClientId=client_id,
             AuthFlow='USER_PASSWORD_AUTH',
             AuthParameters={
-                'USERNAME': 'testuser',
-                'PASSWORD': 'MyPassword123!'
+                'USERNAME': cognito_username,
+                'PASSWORD': cognito_password
             }
         )
         bearer_token = auth_response['AuthenticationResult']['AccessToken']
@@ -168,7 +179,7 @@ def get_token(user_pool_id: str, client_id: str, client_secret: str, scope_strin
 
         }
         print(client_id)
-        response = requests.post(url, headers=headers, data=data)
+        response = requests.post(url, headers=headers, data=data, timeout=30)
         response.raise_for_status()
         return response.json()
 
